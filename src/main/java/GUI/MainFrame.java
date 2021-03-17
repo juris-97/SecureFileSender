@@ -1,5 +1,9 @@
 package GUI;
 
+import Events.BottomListeners;
+import Events.LeftSideListeners;
+import Events.RightSideListeners;
+import Events.TopListeners;
 import GUI.Center.Left;
 import GUI.Center.Right;
 
@@ -14,6 +18,11 @@ public class MainFrame {
     JFrame frame;
     JPanel background;
     JPanel top, right, left, bottom;
+
+    BottomListeners   bottomListeners;
+    TopListeners      topListeners;
+    LeftSideListeners leftSideListener;
+    RightSideListeners rightSideListeners;
 
     public MainFrame(){
         initFrame();
@@ -36,7 +45,15 @@ public class MainFrame {
         right  = new Right(frame);
         bottom = new Bottom(frame);
 
+        initListeners();
         frame.getContentPane().add(background);
         frame.setVisible(true);
+    }
+
+    public void initListeners(){
+        bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right);
+        topListeners = new TopListeners((Top) top);
+        leftSideListener = new LeftSideListeners((Left) left);
+        rightSideListeners = new RightSideListeners((Right) right);
     }
 }

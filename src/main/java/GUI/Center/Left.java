@@ -32,4 +32,11 @@ public class Left extends JPanel {
         this.add(leftBottom);
         mainFrame.getContentPane().add(BorderLayout.WEST, this);
     }
+    public LeftTop getLeftTop() {
+        return leftTop;
+    }
+
+    public LeftBottom getLeftBottom() {
+        return leftBottom;
+    }
 }

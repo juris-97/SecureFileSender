@@ -36,4 +36,8 @@ public class Right extends JPanel {
         this.add(scrollPane);
         mainFrame.getContentPane().add(BorderLayout.EAST, this);
     }
+
+    public JList getList() {
+        return list;
+    }
 }

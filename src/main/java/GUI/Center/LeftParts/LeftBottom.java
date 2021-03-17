@@ -15,6 +15,7 @@ public class LeftBottom extends JPanel {
     JRadioButton OCF;
     JRadioButton OFB;
 
+    ButtonGroup buttonGroup;
 
     public LeftBottom(){
         cypherMethodLabel = new JLabel("Choose cypher method: ");
@@ -41,12 +42,12 @@ public class LeftBottom extends JPanel {
         GridLayout grid = new GridLayout(2,2);
         lower.setLayout(grid);
         lower.setBorder(BorderFactory.createEmptyBorder(5, 5, 60, 0));
-        ButtonGroup group = new ButtonGroup();
+        buttonGroup = new ButtonGroup();
 
-        group.add(ECB);
-        group.add(CFB);
-        group.add(OCF);
-        group.add(OFB);
+        buttonGroup.add(ECB);
+        buttonGroup.add(CFB);
+        buttonGroup.add(OCF);
+        buttonGroup.add(OFB);
 
         lower.add(ECB);
         lower.add(CFB);
@@ -56,5 +57,9 @@ public class LeftBottom extends JPanel {
 
         this.add(upper);
         this.add(lower);
+    }
+
+    public ButtonGroup getButtonGroup() {
+        return buttonGroup;
     }
 }

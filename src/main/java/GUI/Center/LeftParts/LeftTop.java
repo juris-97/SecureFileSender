@@ -47,4 +47,12 @@ public class LeftTop extends JPanel {
         this.add(upper);
         this.add(lower);
     }
+
+    public JButton getExchangeButton() {
+        return exchangeButton;
+    }
+
+    public JButton getGenerateButton() {
+        return generateButton;
+    }
 }

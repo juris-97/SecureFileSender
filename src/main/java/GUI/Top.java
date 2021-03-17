@@ -55,4 +55,20 @@ public class Top extends JPanel {
         this.add(lower);
         mainFrame.getContentPane().add(BorderLayout.NORTH, this);
     }
+
+    public JButton getChooseFileButton() {
+        return chooseFileButton;
+    }
+
+    public JLabel getPathLabel() {
+        return pathLabel;
+    }
+
+    public JLabel getToLabel() {
+        return toLabel;
+    }
+
+    public JTextField getIpField() {
+        return ipField;
+    }
 }
