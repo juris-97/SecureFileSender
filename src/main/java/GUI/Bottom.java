@@ -7,7 +7,7 @@ public class Bottom extends JPanel {
 
     JButton send;
     JFrame mainFrame;
-    
+
     // [TODO] implement progress bar depending on cypher and sending time
     JProgressBar progressBar;
 
