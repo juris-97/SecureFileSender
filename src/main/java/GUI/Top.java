@@ -2,11 +2,11 @@ package GUI;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 public class Top extends JPanel {
 
     private static final int HEIGHT = (int) 2.5 * 40; // 100px
-    String path = "C:\\Program Files\\Java\\jdk1.8.0_212\\bin\\java.exe";
 
     JFrame mainFrame;
     JLabel toLabel;
@@ -14,16 +14,19 @@ public class Top extends JPanel {
 
     JTextField ipField;
     JButton chooseFileButton;
+    JButton connectButton;
+
+    File chosenFile;
 
     public Top(JFrame frame){
         this.mainFrame = frame;
         toLabel = new JLabel("To: ");
         ipField = new JTextField();
         chooseFileButton = new JButton("Choose File");
+        connectButton = new JButton("Connect");
 
-        // [TODO] path should be changed depending on chosen file;
-        pathLabel = new JLabel(path);
-        pathLabel.setBorder(BorderFactory.createEmptyBorder(0,10,0,0));
+        pathLabel = new JLabel();
+        pathLabel.setBorder(BorderFactory.createEmptyBorder(0,10,0,40));
 
         initPanel();
     }
@@ -48,6 +51,8 @@ public class Top extends JPanel {
         upper.add(ipField);
 
         JPanel lower = createSide(5,5,10, (int)(mainFrame.getWidth() * 0.6));
+        lower.add(connectButton);
+        lower.add(Box.createRigidArea(new Dimension(5, 0)));
         lower.add(chooseFileButton);
         lower.add(pathLabel);
 
@@ -70,5 +75,21 @@ public class Top extends JPanel {
 
     public JTextField getIpField() {
         return ipField;
+    }
+
+    public void setPath(String path) {
+        pathLabel.setText(path);
+    }
+
+    public JButton getConnectButton() {
+        return connectButton;
+    }
+
+    public void setChosenFile(File chosenFile) {
+        this.chosenFile = chosenFile;
+    }
+
+    public File getChosenFile() {
+        return chosenFile;
     }
 }

@@ -1,5 +1,7 @@
 package GUI;
 
+import Connection.Receiver;
+import Connection.Sender;
 import Events.BottomListeners;
 import Events.LeftSideListeners;
 import Events.RightSideListeners;
@@ -24,8 +26,22 @@ public class MainFrame {
     LeftSideListeners leftSideListener;
     RightSideListeners rightSideListeners;
 
+    Receiver receiver;
+    Sender sender;
+
     public MainFrame(){
         initFrame();
+    }
+
+    public void initSender(){
+        sender = new Sender((Top) top);
+        sender.establishConnection();
+    }
+
+    public void initReceiving(){
+        receiver = new Receiver((Right) right);
+        Thread recThread = new Thread(receiver);
+        recThread.start();
     }
 
     public void initFrame(){
@@ -45,14 +61,18 @@ public class MainFrame {
         right  = new Right(frame);
         bottom = new Bottom(frame);
 
+        initSender();
+        initReceiving();
         initListeners();
+
         frame.getContentPane().add(background);
         frame.setVisible(true);
     }
 
     public void initListeners(){
-        bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right);
-        topListeners = new TopListeners((Top) top);
+
+        bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right, sender, receiver);
+        topListeners = new TopListeners((Top) top, sender);
         leftSideListener = new LeftSideListeners((Left) left);
         rightSideListeners = new RightSideListeners((Right) right);
     }
