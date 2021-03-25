@@ -32,6 +32,7 @@ public class Right extends JPanel {
         scrollPane = new JScrollPane(list);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
         receivedLabel = new JLabel("Received files: ");
         receivedLabel.setBorder(BorderFactory.createEmptyBorder(0,40,5,0));
 

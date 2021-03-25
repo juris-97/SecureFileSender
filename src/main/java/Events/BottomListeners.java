@@ -33,11 +33,9 @@ public class BottomListeners {
 
     class SendButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            //System.out.print("SEND CLICKED - TO: ");
-            //System.out.println(top.getIpField().getText());
+
             try{
-                //sender.sendFile(top.getChosenFile());
-                sender.send();
+                sender.sendFile();
             }catch (Exception e1){
                 e1.getStackTrace();
             }

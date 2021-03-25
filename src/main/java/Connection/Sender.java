@@ -6,6 +6,7 @@ import GUI.Top;
 import java.io.*;
 import java.net.Socket;
 
+
 public class Sender {
     Socket socket;
     OutputStream outStream;
@@ -32,7 +33,6 @@ public class Sender {
 
 
     public void send(){
-        dOut = new DataOutputStream(outStream);
 
         try{
             dOut.writeUTF("Hello");
@@ -41,5 +41,31 @@ public class Sender {
         }catch (IOException e){
             e.getStackTrace();
         }
+    }
+
+    public void sendFile(){
+        File file = top.getChosenFile();
+
+        if(file == null) return;
+
+        byte [] fileBytes = new byte[(int) file.length()];
+
+        try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))){
+
+            dOut = new DataOutputStream(outStream);
+            bis.read(fileBytes, 0, fileBytes.length);
+
+            dOut.writeUTF(file.getName());
+            dOut.writeLong(file.length());
+            dOut.write(fileBytes, 0, fileBytes.length);
+            System.out.println("File sent!");
+
+            dOut.flush();
+            fileBytes = null;
+
+        }catch (IOException e){
+            e.getStackTrace();
+        }
+
     }
 }

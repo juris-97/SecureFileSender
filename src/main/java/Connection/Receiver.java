@@ -40,12 +40,22 @@ public class Receiver implements Runnable{
 
         while(true){
             try{
-                if(dataInputStream == null)
-                    continue;
 
-                String message = dataInputStream.readUTF();
-                System.out.println("The message sent from the socket was: " + message);
-                right.getModel().addElement(message);
+                String fileName = dataInputStream.readUTF();
+                long fileSize = dataInputStream.readLong();
+                byte [] bytes = new byte[(int) fileSize];
+                dataInputStream.read(bytes);
+
+                File file = new File(fileName);
+                OutputStream fileStream = new FileOutputStream(file);
+                fileStream.write(bytes);
+
+                System.out.println("File received..");
+                right.getModel().addElement(file);
+
+                fileStream.flush();
+                fileStream.close();
+
             }catch (IOException e){
                 e.getStackTrace();
             }
