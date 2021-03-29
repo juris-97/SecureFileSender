@@ -5,6 +5,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.security.*;
 import java.util.Base64;
@@ -19,11 +20,12 @@ public class KeyManager {
     private KeyPairGenerator keyPairGen;
     private KeyGenerator keygen;
 
-    private String publicKeyFile = "src\\key.pub";
+    private String publicKeyFile = "key.pub";
 
     public KeyManager(){
         genPairKeys();
         genSessionKey();
+        savePublicKeyOnDisk(this.publicKey, "publicKey.pub");
     }
 
     private void genSessionKey(){
@@ -35,7 +37,7 @@ public class KeyManager {
             encoder = Base64.getEncoder();
 
             try{
-                Writer out = new FileWriter("src\\session.key");
+                Writer out = new FileWriter("session.key");
                 out.write(encoder.encodeToString(publicKey.getEncoded()));
 
                 out.close();
@@ -62,14 +64,15 @@ public class KeyManager {
         }
     }
 
-    public void savePublicKeyOnDisk(){
+    public void savePublicKeyOnDisk(Key key, String filename){
         Base64.Encoder encoder;
         encoder = Base64.getEncoder();
 
+
         try{
-            Writer out = new FileWriter(publicKeyFile);
+            Writer out = new FileWriter(filename);
             out.write("-----BEGIN RSA PUBLIC KEY-----\n");
-            out.write(encoder.encodeToString(publicKey.getEncoded()));
+            out.write(encoder.encodeToString(key.getEncoded()));
             out.write("\n-----END RSA PUBLIC KEY-----\n");
             out.close();
 
@@ -79,7 +82,12 @@ public class KeyManager {
 
     }
 
-    private void getPartnerPublicKey(){
 
+    public void setPartnerPublicKey(PublicKey partnerPublicKey) {
+        this.partnerPublicKey = partnerPublicKey;
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
     }
 }

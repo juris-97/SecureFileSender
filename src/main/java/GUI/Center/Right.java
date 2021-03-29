@@ -14,8 +14,6 @@ public class Right extends JPanel {
     JLabel receivedLabel;
     DefaultListModel model;
 
-
-
     private static final int HEIGHT = 7 * 40; // 280
     private static final int WIDTH = 5 * 41; // 205
 

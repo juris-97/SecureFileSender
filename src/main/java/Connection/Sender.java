@@ -2,19 +2,23 @@ package Connection;
 
 
 import GUI.Top;
+import Keys.KeyManager;
 
 import java.io.*;
 import java.net.Socket;
+import java.security.PublicKey;
 
 
 public class Sender {
     Socket socket;
     OutputStream outStream;
     DataOutputStream dOut;
+    KeyManager keyManager;
     Top top;
 
-    public Sender(Top top){
+    public Sender(Top top, KeyManager keyManager){
         this.top = top;
+        this.keyManager = keyManager;
     }
 
     public void establishConnection(){
@@ -25,6 +29,7 @@ public class Sender {
             socket = new Socket(ip, 8181);
             outStream = socket.getOutputStream();
             System.out.println("Connection established..");
+            sendPublicKey(keyManager.getPublicKey());
 
         }catch (Exception e1){
             e1.printStackTrace();
@@ -32,11 +37,16 @@ public class Sender {
     }
 
 
-    public void send(){
+    public void sendPublicKey(PublicKey pubKey){
 
-        try{
-            dOut.writeUTF("Hello");
-            dOut.flush(); // send the message
+        byte [] bytes = pubKey.getEncoded();
+
+        try(BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(bytes))){
+            dOut = new DataOutputStream(outStream);
+            bis.read(bytes, 0, bytes.length);
+            dOut.write(bytes, 0, bytes.length);
+
+            System.out.println("Public Key Sent");
 
         }catch (IOException e){
             e.getStackTrace();

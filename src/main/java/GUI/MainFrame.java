@@ -8,6 +8,7 @@ import Events.RightSideListeners;
 import Events.TopListeners;
 import GUI.Center.Left;
 import GUI.Center.Right;
+import Keys.KeyManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -29,17 +30,19 @@ public class MainFrame {
     Receiver receiver;
     Sender sender;
 
+    KeyManager keyManager;
+
     public MainFrame(){
         initFrame();
     }
 
     public void initSender(){
-        sender = new Sender((Top) top);
+        sender = new Sender((Top) top, keyManager);
         sender.establishConnection();
     }
 
     public void initReceiving(){
-        receiver = new Receiver((Right) right);
+        receiver = new Receiver((Right) right,  keyManager);
         Thread recThread = new Thread(receiver);
         recThread.start();
     }
@@ -60,6 +63,8 @@ public class MainFrame {
         left   = new Left(frame);
         right  = new Right(frame);
         bottom = new Bottom(frame);
+
+        keyManager = new KeyManager();
 
         initSender();
         initReceiving();
