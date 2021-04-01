@@ -3,7 +3,9 @@ package Connection;
 
 import GUI.Center.Right;
 import Keys.KeyManager;
+import sun.rmi.runtime.Log;
 
+import java.awt.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -12,6 +14,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.logging.Logger;
 
 public class Receiver implements Runnable{
 
@@ -32,20 +35,21 @@ public class Receiver implements Runnable{
         try{
             serverSocket = new ServerSocket(8181);
             System.out.println("ServerSocket awaiting connection...");
+
             socket = serverSocket.accept();
             System.out.println("Connection from " + socket + "!");
+
             inputStream = socket.getInputStream();
             dataInputStream = new DataInputStream(inputStream);
 
-            receivePublicKey();
+            //receivePublicKey();
             receive();
         }catch (IOException e){
             e.getStackTrace();
         }
-
     }
 
-    public void receivePublicKey(){
+    public synchronized void receivePublicKey(){
         PublicKey receivedPubKey = null;
         byte [] bytes = new byte[2048];
 
@@ -56,36 +60,46 @@ public class Receiver implements Runnable{
             System.out.println("Public Key received");
             manager.savePublicKeyOnDisk(receivedPubKey, "receivedPubKey.pub");
 
-        }catch (IOException
-                | InvalidKeySpecException
-                | NoSuchAlgorithmException e1){
-            e1.getStackTrace();
+        }catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e){
+            System.out.println(e.getMessage());
         }
     }
 
-    public void receive(){
+    public synchronized void receive(){
 
         while(true){
             try{
 
                 String fileName = dataInputStream.readUTF();
                 long fileSize = dataInputStream.readLong();
-                byte [] bytes = new byte[(int) fileSize];
-                dataInputStream.read(bytes);
+                byte [] buffer = new byte[4098];
 
                 File file = new File(fileName);
-                OutputStream fileStream = new FileOutputStream(file);
-                fileStream.write(bytes);
+                FileOutputStream out = new FileOutputStream(file);
+
+                int read = 0;
+                int totalRead = 0;
+                int remaining = (int)fileSize;
+
+                while((read = dataInputStream.read(buffer, 0, Math.min(buffer.length, remaining))) > 0) {
+                    totalRead += read;
+                    remaining -= read;
+                    System.out.println("read " + totalRead + " bytes.");
+                    out.write(buffer, 0, read);
+                }
+
+                out.flush();
+                out.close();
+                buffer = null;
 
                 System.out.println("File received..");
                 right.getModel().addElement(file);
 
-                fileStream.flush();
-                fileStream.close();
 
             }catch (IOException e){
                 e.getStackTrace();
             }
         }
+
     }
 }
