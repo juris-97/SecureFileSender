@@ -37,7 +37,7 @@ public class MainFrame {
     }
 
     public void initSender(){
-        sender = new Sender((Top) top, keyManager);
+        sender = new Sender((Top) top, (Bottom) bottom, keyManager);
         sender.establishConnection();
     }
 

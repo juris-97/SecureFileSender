@@ -3,12 +3,15 @@ package Events;
 import GUI.Center.Right;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.File;
+import java.io.IOException;
 
 public class RightSideListeners {
     Right rightSide;
-    JList receivedFiles;
+    JList<?> receivedFiles;
 
     public RightSideListeners(Right rightSide){
         this.rightSide = rightSide;
@@ -18,10 +21,19 @@ public class RightSideListeners {
 
     class ReceivedFileChosen implements MouseListener{
         public void mouseClicked(MouseEvent e) {
-            JList list = (JList) e.getSource();
+            JList<?> list = (JList<?>) e.getSource();
             if(e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1){
-                int index = list.locationToIndex(e.getPoint());
-                System.out.println("DOUBLE CLICKED FOR RECEIVED FILE AR INDEX = " + index);
+
+                if(!Desktop.isDesktopSupported())
+                    return;
+
+                try{
+                    Desktop desktop = Desktop.getDesktop();
+                    desktop.open((File)list.getSelectedValue());
+                }catch (IOException err){
+                    System.out.println("There is no default application " +
+                            "for opening files with this extension");
+                }
             }
         }
 
