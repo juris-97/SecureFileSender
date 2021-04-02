@@ -8,10 +8,11 @@ import Events.RightSideListeners;
 import Events.TopListeners;
 import GUI.Center.Left;
 import GUI.Center.Right;
-import Keys.KeyManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class MainFrame {
 
@@ -30,19 +31,18 @@ public class MainFrame {
     Receiver receiver;
     Sender sender;
 
-    KeyManager keyManager;
 
     public MainFrame(){
         initFrame();
     }
 
     public void initSender(){
-        sender = new Sender((Top) top, (Bottom) bottom, keyManager);
+        sender = new Sender((Top) top, (Bottom) bottom);
         sender.establishConnection();
     }
 
     public void initReceiving(){
-        receiver = new Receiver((Right) right,  keyManager);
+        receiver = new Receiver((Right) right);
         Thread recThread = new Thread(receiver);
         recThread.start();
     }
@@ -64,7 +64,6 @@ public class MainFrame {
         right  = new Right(frame);
         bottom = new Bottom(frame);
 
-        keyManager = new KeyManager();
 
         initSender();
         initReceiving();
@@ -72,13 +71,21 @@ public class MainFrame {
 
         frame.getContentPane().add(background);
         frame.setVisible(true);
+
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                sender.disconnect();
+            }
+        });
     }
 
     public void initListeners(){
 
         bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right, sender, receiver);
         topListeners = new TopListeners((Top) top, sender);
-        leftSideListener = new LeftSideListeners((Left) left);
+        leftSideListener = new LeftSideListeners((Left) left, sender);
         rightSideListeners = new RightSideListeners((Right) right);
     }
 }

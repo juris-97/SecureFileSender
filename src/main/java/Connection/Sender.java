@@ -3,7 +3,6 @@ package Connection;
 
 import GUI.Bottom;
 import GUI.Top;
-import Keys.KeyManager;
 
 import java.io.*;
 import java.net.Socket;
@@ -14,15 +13,14 @@ public class Sender {
     Socket socket;
     OutputStream outStream;
     DataOutputStream dOut;
-    KeyManager keyManager;
 
     Top top;
     Bottom bottom;
+    boolean connected;
 
-    public Sender(Top top, Bottom bottom, KeyManager keyManager){
+    public Sender(Top top, Bottom bottom){
         this.top = top;
         this.bottom = bottom;
-        this.keyManager = keyManager;
     }
 
     public void establishConnection(){
@@ -33,18 +31,34 @@ public class Sender {
             socket = new Socket(ip, 8181);
             outStream = socket.getOutputStream();
             dOut = new DataOutputStream(outStream);
+            connected = true;
+
             System.out.println("Connection established..");
-            //sendPublicKey(keyManager.getPublicKey());
+            // TODO SEND PUBLIC KEY
 
         }catch (Exception e1){
             e1.printStackTrace();
         }
     }
 
+    public void disconnect(){
+        try{
+            if(socket != null) socket.close();
+            if(outStream != null) outStream.close();
+            if(dOut != null) dOut.close();
+
+            connected = false;
+            top.getConnectButton().setText("Connect");
+
+            System.out.println("Disconnected");
+        }catch (IOException e){
+            System.out.println(e.getMessage());
+        }
+    }
 
     public void sendPublicKey(PublicKey pubKey){
 
-        byte [] bytes = pubKey.getEncoded();
+       /* byte [] bytes = pubKey.getEncoded();
 
         try(BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(bytes))){
             dOut = new DataOutputStream(outStream);
@@ -55,10 +69,12 @@ public class Sender {
 
         }catch (IOException e){
             e.getStackTrace();
-        }
+        }*/
     }
 
+
     public void sendFile(){
+
         File file = top.getChosenFile();
 
         if(file == null) return;
@@ -82,5 +98,9 @@ public class Sender {
         }catch (IOException e1){
             System.out.println(e1.getMessage());
         }
+    }
+
+    public boolean isConnected() {
+        return connected;
     }
 }

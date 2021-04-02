@@ -2,10 +2,7 @@ package Connection;
 
 
 import GUI.Center.Right;
-import Keys.KeyManager;
-import sun.rmi.runtime.Log;
 
-import java.awt.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,20 +11,18 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.logging.Logger;
 
 public class Receiver implements Runnable{
 
     ServerSocket serverSocket;
     InputStream inputStream;
     DataInputStream dataInputStream;
-    KeyManager manager;
+
     Socket socket;
     Right right;
 
-    public Receiver(Right right, KeyManager manager){
+    public Receiver(Right right){
         this.right = right;
-        this.manager = manager;
     }
 
     @Override
@@ -42,15 +37,16 @@ public class Receiver implements Runnable{
             inputStream = socket.getInputStream();
             dataInputStream = new DataInputStream(inputStream);
 
-            //receivePublicKey();
+            receivePublicKey();
             receive();
         }catch (IOException e){
             e.getStackTrace();
         }
     }
 
+
     public synchronized void receivePublicKey(){
-        PublicKey receivedPubKey = null;
+        /*PublicKey receivedPubKey = null;
         byte [] bytes = new byte[2048];
 
         try{
@@ -58,11 +54,11 @@ public class Receiver implements Runnable{
             receivedPubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
             manager.setPartnerPublicKey(receivedPubKey);
             System.out.println("Public Key received");
-            manager.savePublicKeyOnDisk(receivedPubKey, "receivedPubKey.pub");
+            manager.saveKeyOnDisk(receivedPubKey, "receivedPubKey.pub");
 
         }catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e){
-            System.out.println(e.getMessage());
-        }
+            e.printStackTrace();
+        }*/
     }
 
     public synchronized void receive(){
@@ -95,9 +91,8 @@ public class Receiver implements Runnable{
                 System.out.println("File received..");
                 right.getModel().addElement(file);
 
-
             }catch (IOException e){
-                e.getStackTrace();
+                e.printStackTrace();
             }
         }
 
