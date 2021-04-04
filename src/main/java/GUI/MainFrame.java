@@ -8,6 +8,8 @@ import Events.RightSideListeners;
 import Events.TopListeners;
 import GUI.Center.Left;
 import GUI.Center.Right;
+import Keys.AsymmetricCypher;
+import Keys.KeyHandler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,23 +30,20 @@ public class MainFrame {
     LeftSideListeners leftSideListener;
     RightSideListeners rightSideListeners;
 
+    KeyHandler keyHandler;
     Receiver receiver;
     Sender sender;
-
 
     public MainFrame(){
         initFrame();
     }
 
     public void initSender(){
-        sender = new Sender((Top) top, (Bottom) bottom);
-        sender.establishConnection();
+        sender = new Sender((Top) top, (Bottom) bottom, keyHandler);
     }
 
-    public void initReceiving(){
-        receiver = new Receiver((Right) right);
-        Thread recThread = new Thread(receiver);
-        recThread.start();
+    public void initReceiving() {
+        receiver = new Receiver((Right) right, keyHandler);
     }
 
     public void initFrame(){
@@ -64,6 +63,11 @@ public class MainFrame {
         right  = new Right(frame);
         bottom = new Bottom(frame);
 
+        try{
+            keyHandler = new KeyHandler();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
         initSender();
         initReceiving();
@@ -84,8 +88,8 @@ public class MainFrame {
     public void initListeners(){
 
         bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right, sender, receiver);
-        topListeners = new TopListeners((Top) top, sender);
-        leftSideListener = new LeftSideListeners((Left) left, sender);
+        topListeners = new TopListeners((Top) top, sender, keyHandler);
+        leftSideListener = new LeftSideListeners((Left) left, sender, keyHandler);
         rightSideListeners = new RightSideListeners((Right) right);
     }
 }

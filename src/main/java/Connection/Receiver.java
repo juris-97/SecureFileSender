@@ -2,27 +2,41 @@ package Connection;
 
 
 import GUI.Center.Right;
+import Keys.AsymmetricCypher;
+import Keys.KeyHandler;
+import Keys.SymmetricCypher;
 
+import javax.crypto.SecretKey;
+import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
+import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 
+
 public class Receiver implements Runnable{
 
-    ServerSocket serverSocket;
-    InputStream inputStream;
-    DataInputStream dataInputStream;
+    private DataInputStream dataInputStream;
+    private InputStream inputStream;
 
-    Socket socket;
-    Right right;
+    private ServerSocket serverSocket;
+    private Socket clientSocket;
 
-    public Receiver(Right right){
+    private KeyHandler keyHandler;
+    private Socket socket;
+    private Right right;
+
+
+    public Receiver(Right right, KeyHandler keyHandler){
         this.right = right;
+        this.keyHandler = keyHandler;
+        new Thread(this).start();
+    }
+
+    public void startReceiving(){
+        new Thread(new DataReceiver()).start();
     }
 
     @Override
@@ -31,47 +45,57 @@ public class Receiver implements Runnable{
             serverSocket = new ServerSocket(8181);
             System.out.println("ServerSocket awaiting connection...");
 
-            socket = serverSocket.accept();
-            System.out.println("Connection from " + socket + "!");
+            clientSocket = serverSocket.accept();
+            System.out.println("Connection from " + clientSocket + "!");
 
-            inputStream = socket.getInputStream();
+            inputStream = clientSocket.getInputStream();
             dataInputStream = new DataInputStream(inputStream);
+            startReceiving();
 
-            receivePublicKey();
-            receive();
         }catch (IOException e){
             e.getStackTrace();
         }
     }
 
+    public class DataReceiver implements Runnable{
+        @Override
+        public void run() {
 
-    public synchronized void receivePublicKey(){
-        /*PublicKey receivedPubKey = null;
-        byte [] bytes = new byte[2048];
+            while (true) {
+                try {
+                    String protocol = dataInputStream.readUTF();
 
-        try{
-            dataInputStream.read(bytes);
-            receivedPubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
-            manager.setPartnerPublicKey(receivedPubKey);
-            System.out.println("Public Key received");
-            manager.saveKeyOnDisk(receivedPubKey, "receivedPubKey.pub");
+                    switch (protocol) {
+                        case "A":
+                            receiveData();
+                            break;
 
-        }catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e){
-            e.printStackTrace();
-        }*/
-    }
+                        case "B":
+                            receivePublicKey();
+                            break;
 
-    public synchronized void receive(){
+                        case "C":
+                            receiveSessionKey();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
-        while(true){
+        public void receiveData(){
             try{
+                if(keyHandler.getReceivedWrappedSessionKey() == null){
+                    System.out.println("No session key received");
+                    return;
+                }
 
-                String fileName = dataInputStream.readUTF();
+                String filename = dataInputStream.readUTF();
                 long fileSize = dataInputStream.readLong();
                 byte [] buffer = new byte[4098];
 
-                File file = new File(fileName);
-                FileOutputStream out = new FileOutputStream(file);
+                // contains encrypted file
+                ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
                 int read = 0;
                 int totalRead = 0;
@@ -81,20 +105,80 @@ public class Receiver implements Runnable{
                     totalRead += read;
                     remaining -= read;
                     System.out.println("read " + totalRead + " bytes.");
-                    out.write(buffer, 0, read);
+                    byteOut.write(buffer, 0, read);
                 }
 
-                out.flush();
-                out.close();
-                buffer = null;
+                byte [] bytes = byteOut.toByteArray();
 
-                System.out.println("File received..");
-                right.getModel().addElement(file);
+                SecretKey unwrappedSessionKey = AsymmetricCypher.unwrapSessionKeyWithPrivateKey(
+                        keyHandler.getReceivedWrappedSessionKey(), keyHandler.getPrivateKey());
+
+                byte [] decryptedFile = SymmetricCypher.decryptFile(bytes, unwrappedSessionKey, keyHandler.getReceivedInitVector());
+
+                File receivedDecryptedFile = new File("received_"+filename);
+                try (FileOutputStream stream = new FileOutputStream(receivedDecryptedFile)) {
+                    stream.write(decryptedFile);
+                }
+
+                right.getModel().addElement(receivedDecryptedFile);
 
             }catch (IOException e){
-                e.printStackTrace();
+                //e.printStackTrace();
+                System.out.printf("Waiting for receiving Data..");
             }
         }
 
+        public void receivePublicKey(){
+            PublicKey receivedPubKey = null;
+            byte [] bytes = new byte[2048];
+
+            try{
+                dataInputStream.read(bytes);
+                receivedPubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
+                keyHandler.setOtherPublicKey(receivedPubKey);
+
+                System.out.println("Public Key received");
+
+            }catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e){
+                //e.printStackTrace();
+                System.out.println("Waiting for receiving public key..");
+            }
+        }
+
+        public void receiveSessionKey(){
+            try{
+
+                int initVectorLength = dataInputStream.readInt();
+                int wrappedSessionKeyLength = dataInputStream.readInt();
+
+                byte [] initVector = new byte[initVectorLength];
+                byte [] wrappedSessionKey = new byte[wrappedSessionKeyLength];
+
+                dataInputStream.read(initVector);
+                dataInputStream.read(wrappedSessionKey);
+
+                keyHandler.setReceivedInitVector(initVector);
+                keyHandler.setReceivedSessionKey(wrappedSessionKey);
+
+                System.out.println("Wrapped Session Key received");
+
+            }catch (IOException e){
+                //e.printStackTrace();
+                System.out.printf("Waiting for receiving Session key..");
+            }
+        }
+
+    }
+
+
+    public void disconnect(){
+        try{
+            inputStream.close();
+            dataInputStream.close();
+            socket.close();
+            serverSocket.close();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
     }
 }
