@@ -41,6 +41,7 @@ public class TopListeners {
     class ConnectListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             sender.establishConnection(keyHandler.getPublicKey());
+            sender.sendPublicKey();
         }
     }
 }

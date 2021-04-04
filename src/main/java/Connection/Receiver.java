@@ -109,6 +109,10 @@ public class Receiver implements Runnable{
                 }
 
                 byte [] bytes = byteOut.toByteArray();
+                System.out.println("Received Wrapped Session Key: " +
+                        DatatypeConverter.printHexBinary(keyHandler.getReceivedWrappedSessionKey()) +
+                        " with size: " + keyHandler.getReceivedWrappedSessionKey().length + " \n");
+
 
                 SecretKey unwrappedSessionKey = AsymmetricCypher.unwrapSessionKeyWithPrivateKey(
                         keyHandler.getReceivedWrappedSessionKey(), keyHandler.getPrivateKey());

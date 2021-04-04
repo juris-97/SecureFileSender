@@ -40,9 +40,7 @@ public class LeftSideListeners {
 
     class ExchangeSessionKeyListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            if(keyHandler.getGeneratedSessionKey() != null
-                    && keyHandler.getInitialisedVector() != null
-                    && keyHandler.getOtherPublicKey() != null){
+            if(keyHandler.getGeneratedSessionKey() != null && keyHandler.getInitialisedVector() != null){
 
                 // wrap session key with publicKey of user B
                 byte [] wrappedSessionKey
@@ -50,6 +48,7 @@ public class LeftSideListeners {
                         keyHandler.getOtherPublicKey());
                 // send wrapped session key
                 sender.sendWrappedSessionKeyAndInitVector();
+                System.out.println("Wrapped Session Key Send");
             }
             System.out.println("EXCHANGE SESSION KEY CLICKED");
         }

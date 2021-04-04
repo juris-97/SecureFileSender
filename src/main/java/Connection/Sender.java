@@ -40,7 +40,6 @@ public class Sender {
             dOut = new DataOutputStream(outStream);
             connected = true;
 
-            sendPublicKey();
             System.out.println("Connection established..");
 
         }catch (Exception e1){
@@ -90,7 +89,7 @@ public class Sender {
         byte [] initVector = keyHandler.getInitialisedVector();
         byte [] wrappedSessionKey = AsymmetricCypher.wrapSessionKeyWithPublicKey(
                 keyHandler.getGeneratedSessionKey(),
-                keyHandler.getPublicKey());
+                keyHandler.getOtherPublicKey());
 
         try{
             dOut.writeUTF("C"); // defining protocol

@@ -8,9 +8,9 @@ import java.security.PublicKey;
 public class KeyHandler {
 
     private PrivateKey privateKey;
-    private PublicKey publicKey;
+    private volatile PublicKey publicKey;
     private PublicKey otherPublicKey;
-    private SecretKey generatedSessionKey;
+    private volatile SecretKey generatedSessionKey;
     private byte [] receivedWrappedSessionKey;
     private byte [] InitialisedVector;
     private byte [] receivedInitVector;
