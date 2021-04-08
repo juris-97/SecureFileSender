@@ -2,10 +2,10 @@ package Connection;
 
 
 import Connection.PubKeyExchange.Exchange;
+import GUI.Sides.Bottom;
 import Security.KeyHandler;
 import Security.SymmetricCipher;
 
-import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
@@ -13,7 +13,7 @@ import java.io.*;
 import java.net.Socket;
 import java.security.PublicKey;
 
-public class Sender {
+public class Sender{
 
     Socket socket;
 
@@ -24,6 +24,11 @@ public class Sender {
     DataInputStream dIn;
 
     private boolean connected = false;
+    private final Bottom bottom;
+
+    public Sender(Bottom bottom){
+        this.bottom = bottom;
+    }
 
     public void disconnect(){
         try{
@@ -60,10 +65,28 @@ public class Sender {
         }
     }
 
+    public class FileSender implements Runnable{
+        private final File file;
+        private final String algorithmMod;
+        private final SecretKey sessionKey;
+        private final byte [] initVector;
+
+        public FileSender(File file, String algorithmMod, SecretKey sessionKey, byte [] initVector){
+            this.file = file;
+            this.algorithmMod = algorithmMod;
+            this.sessionKey = sessionKey;
+            this.initVector = initVector;
+        }
+        @Override
+        public void run() {
+            sendFile(file, algorithmMod, sessionKey, initVector);
+        }
+    }
+
     public void sendFile(File file, String algorithmMod, SecretKey sessionKey, byte [] initVector){
 
         String algorithm = "AES/" + algorithmMod + "/PKCS5PADDING";
-        byte [] encryptedFile = SymmetricCipher.encryptFile(file, sessionKey, initVector, algorithm);
+        byte [] encryptedFile = SymmetricCipher.encryptFile(file, sessionKey, initVector, algorithm, bottom);
 
         try{
             dOut.writeUTF("A"); // defining protocol
@@ -77,9 +100,18 @@ public class Sender {
 
             ByteArrayInputStream bais = new ByteArrayInputStream(encryptedFile);
 
-            while ((read = bais.read(buffer, 0, Math.min(buffer.length, remaining))) > 0)
+            double loopTimes = (double) encryptedFile.length / buffer.length;
+            double step = loopTimes != 0 ? (50 / loopTimes) : 100;
+            double progress = bottom.getProgressBar().getValue();
+
+            while ((read = bais.read(buffer, 0, Math.min(buffer.length, remaining))) > 0){
                 dOut.write(buffer, 0, read);
 
+                progress += step;
+                bottom.getProgressBar().setValue((int)progress);
+            }
+
+            bottom.getProgressBar().setValue(0);
             System.out.println("[SIDE = 1] Encrypted File sent!");
             dOut.flush();
             bais.close();

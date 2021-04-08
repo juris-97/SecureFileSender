@@ -32,7 +32,7 @@ public class BottomListeners {
         this.bottom.getSendButton().addActionListener(new SendButtonListener());
     }
 
-    public class SendButtonListener implements ActionListener{
+    class SendButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
 
             // check if client connected
@@ -58,7 +58,15 @@ public class BottomListeners {
                 keHandler.setInitialVector(initVector);
                 sender.sendInitVector(initVector);
             }
-            sender.sendFile(fileToSend, selectedAlgorithm.getText(), keHandler.getSessionKey(), keHandler.getInitialVector());
+
+
+            //sender.sendFile(fileToSend, selectedAlgorithm.getText(), keHandler.getSessionKey(), keHandler.getInitialVector());
+            Sender.FileSender fs = sender.new FileSender(
+                    fileToSend, selectedAlgorithm.getText(),
+                    keHandler.getSessionKey(), keHandler.getInitialVector());
+            new Thread(fs).start();
+
+
 
             keHandler.setSessionKeyExchange(false);
             keHandler.setSessionKey(null);
