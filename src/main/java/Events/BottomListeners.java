@@ -1,46 +1,69 @@
 package Events;
 
-import Connection.Receiver;
+
 import Connection.Sender;
-import GUI.Bottom;
-import GUI.Center.Left;
-import GUI.Center.Right;
-import GUI.Top;
+import GUI.Sides.Bottom;
+import GUI.Sides.Center.LeftParts.LeftBottom;
+import GUI.Sides.Top;
+import Security.KeyHandler;
+import Security.SymmetricCipher;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 
+import static Events.ErrorHandler.*;
+
 public class BottomListeners {
 
     private final Top top;
     private final Bottom bottom;
-    private final Right rightSide;
-    private final Left leftSide;
     private final Sender sender;
-    private final Receiver receiver;
+    private final KeyHandler keHandler;
+    private final LeftBottom leftBottom;
 
-    public BottomListeners(Bottom bottom, Top top, Left leftSide, Right rightSide, Sender sender, Receiver receiver){
-        this.bottom = bottom;
-        this.leftSide = leftSide;
-        this.rightSide = rightSide;
+    public BottomListeners(Bottom bottom, Top top, LeftBottom leftBottom , KeyHandler keyHandler, Sender sender){
         this.top = top;
+        this.bottom = bottom;
+        this.leftBottom = leftBottom;
+        this.keHandler = keyHandler;
         this.sender = sender;
-        this.receiver = receiver;
-        bottom.getSend().addActionListener(new SendButtonListener());
+        this.bottom.getSendButton().addActionListener(new SendButtonListener());
     }
 
-    class SendButtonListener implements ActionListener{
+    public class SendButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
 
-            try{
-                sender.sendFile();
-            }catch (Exception e1){
-                e1.getStackTrace();
-            }
+            // check if client connected
+            if(!connectionCheck(sender.isConnection())) return;
 
-            bottom.getProgressBar().setValue(100);
+            // check if algorithm method is selected
+            JRadioButton selectedAlgorithm =  leftBottom.getSelectedButton();
+            if(!selectedAlgorithmCheck(selectedAlgorithm)) return;
+
+            // check if file for sending is selected
+            File fileToSend = top.getChosenFile();
+            if(!fileToSendChosenCheck(fileToSend)) return;
+
+            // check if session key was generated
+            if(!sessionKeyGeneratedCheck(keHandler.getSessionKey())) return;
+
+            // check if session key was exchanged
+            if(!sessionKeyExchangeCheck(keHandler.isSessionKeyExchange())) return;
+
+            String algorithmMod = selectedAlgorithm.getText();
+            if(!algorithmMod.equals("ECB")){
+                byte [] initVector = SymmetricCipher.createInitializationVector();
+                keHandler.setInitialVector(initVector);
+                sender.sendInitVector(initVector);
+            }
+            sender.sendFile(fileToSend, selectedAlgorithm.getText(), keHandler.getSessionKey(), keHandler.getInitialVector());
+
+            keHandler.setSessionKeyExchange(false);
+            keHandler.setSessionKey(null);
+            keHandler.setInitialVector(null);
         }
+
     }
 }

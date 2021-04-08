@@ -1,143 +1,135 @@
 package Connection;
 
 
-import GUI.Bottom;
-import GUI.Top;
-import Keys.AsymmetricCypher;
-import Keys.KeyHandler;
-import Keys.SymmetricCypher;
+import Connection.PubKeyExchange.Exchange;
+import Security.KeyHandler;
+import Security.SymmetricCipher;
 
+import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.Socket;
 import java.security.PublicKey;
 
-
 public class Sender {
+
     Socket socket;
+
     OutputStream outStream;
+    InputStream inputStream;
+
     DataOutputStream dOut;
+    DataInputStream dIn;
 
-    Top top;
-    Bottom bottom;
-    boolean connected;
-    KeyHandler keyHandler;
-
-    public Sender(Top top, Bottom bottom, KeyHandler keyHandler){
-        this.top = top;
-        this.bottom = bottom;
-        this.keyHandler = keyHandler;
-    }
-
-    public void establishConnection(PublicKey publicKey){
-        String ip = top.getIpField().getText();
-        if(ip.equals("")) return;
-
-        try{
-            socket = new Socket(ip, 8181);
-            outStream = socket.getOutputStream();
-            dOut = new DataOutputStream(outStream);
-            connected = true;
-
-            System.out.println("Connection established..");
-
-        }catch (Exception e1){
-            e1.printStackTrace();
-        }
-    }
+    private boolean connected = false;
 
     public void disconnect(){
         try{
-            if(socket != null) socket.close();
-            if(outStream != null) outStream.close();
-            if(dOut != null) dOut.close();
-
+            socket.close();
+            outStream.close();
+            inputStream.close();
+            dOut.close();
+            dIn.close();
             connected = false;
-            top.getConnectButton().setText("Connect");
-
-            System.out.println("Disconnected");
-        }catch (IOException e){
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void sendPublicKey(){
-
-        PublicKey publicKey = keyHandler.getPublicKey();
-        byte [] bytes = publicKey.getEncoded();
-        //System.out.println("Public key client A: " + DatatypeConverter.printHexBinary(pubKey.getEncoded()));
-
-        try(BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(bytes))){
-
-            dOut.writeUTF("B"); // defining protocol
-
-            bis.read(bytes, 0, bytes.length);
-            dOut.write(bytes, 0, bytes.length);
-            dOut.flush();
-            System.out.println("Public Key: " + DatatypeConverter.printHexBinary(publicKey.getEncoded()) + "\nSEND!");
-
-        }catch (IOException e){
-            e.getStackTrace();
-        }
-    }
-
-    public void sendWrappedSessionKeyAndInitVector(){
-
-        System.out.println("Session Key: " + DatatypeConverter.printHexBinary(keyHandler.getGeneratedSessionKey().getEncoded()));
-
-        byte [] initVector = keyHandler.getInitialisedVector();
-        byte [] wrappedSessionKey = AsymmetricCypher.wrapSessionKeyWithPublicKey(
-                keyHandler.getGeneratedSessionKey(),
-                keyHandler.getOtherPublicKey());
-
-        try{
-            dOut.writeUTF("C"); // defining protocol
-            dOut.writeInt(initVector.length);
-            dOut.writeInt(wrappedSessionKey.length);
-
-            dOut.write(initVector);
-            dOut.write(wrappedSessionKey);
-            dOut.flush();
-
-            System.out.println("Init vector" + DatatypeConverter.printHexBinary(initVector) + " with size: " + initVector.length + "\nSEND");
-            System.out.println("Wrapped Session Key: " + DatatypeConverter.printHexBinary(wrappedSessionKey) + " with size: " + wrappedSessionKey.length + " \nSEND");
+            System.out.println("Disconnected.");
         }catch (IOException e){
             e.printStackTrace();
         }
     }
 
-    public void sendFile() {
-        File file = top.getChosenFile();
-        try (FileInputStream fis = new FileInputStream(file)) {
+    public void exchangePublicKey(PublicKey key, DataOutputStream dOut, DataInputStream dis, KeyHandler keyHandler){
+        Exchange.sendPublicKey(key, dOut);
+        Exchange.receivePublicKey(dis, keyHandler);
 
-            byte[] encryptedFile = SymmetricCypher.encryptFile(file,
-                    keyHandler.getGeneratedSessionKey(),
-                    keyHandler.getInitialisedVector());
+        //System.out.println("[Send in SIDE = 1] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getPublicKey().getEncoded()));
+        //System.out.println("[Rece in SIDE = 1] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getReceivedPublicKey().getEncoded()));
+    }
 
+    public void sendWrappedSessionKey(byte [] wrappedSessionKey){
+        try{
+            dOut.writeUTF("C");
+            dOut.writeInt(wrappedSessionKey.length);
+            dOut.write(wrappedSessionKey);
+            dOut.flush();
+            System.out.println("[Send in SIDE = 1] Wrapped Session Key: " + DatatypeConverter.printHexBinary(wrappedSessionKey));
+
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void sendFile(File file, String algorithmMod, SecretKey sessionKey, byte [] initVector){
+
+        String algorithm = "AES/" + algorithmMod + "/PKCS5PADDING";
+        byte [] encryptedFile = SymmetricCipher.encryptFile(file, sessionKey, initVector, algorithm);
+
+        try{
             dOut.writeUTF("A"); // defining protocol
             dOut.writeUTF(file.getName());
             dOut.writeLong(encryptedFile.length);
+            dOut.writeUTF(algorithm);
 
             byte[] buffer = new byte[4096];
-
-            ByteArrayInputStream bais = new ByteArrayInputStream(encryptedFile);
-
             int read = 0;
             int remaining = (int) file.length();
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(encryptedFile);
 
             while ((read = bais.read(buffer, 0, Math.min(buffer.length, remaining))) > 0)
                 dOut.write(buffer, 0, read);
 
-            System.out.println("Encrypted File sent!");
-            bais.close();
+            System.out.println("[SIDE = 1] Encrypted File sent!");
             dOut.flush();
+            bais.close();
 
-        } catch (IOException e1) {
-            System.out.println(e1.getMessage());
+
+        }catch (IOException e){
+            e.printStackTrace();
         }
     }
-    public boolean isConnected() {
+
+
+    public void sendInitVector(byte [] initVector){
+        try{
+            dOut.writeUTF("I");
+            dOut.write(initVector);
+            dOut.flush();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public int establishConnection(PublicKey publicKey, String ip) {
+        try{
+            socket = new Socket(ip, 8181);
+            outStream = socket.getOutputStream();
+            inputStream = socket.getInputStream();
+
+            dOut = new DataOutputStream(outStream);
+            dIn = new DataInputStream(inputStream);
+
+            connected = true;
+            System.out.println("Connection established!");
+            return 0;
+
+        }catch (IOException e){
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Probably server is off..",
+                    "InfoBox: " + "Something went wrong", JOptionPane.INFORMATION_MESSAGE);
+            return -1;
+        }
+    }
+
+    public DataInputStream getdIn() {
+        return dIn;
+    }
+    public DataOutputStream getdOut() {
+        return dOut;
+    }
+    public boolean isConnection() {
         return connected;
     }
 }

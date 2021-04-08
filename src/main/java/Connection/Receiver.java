@@ -1,188 +1,180 @@
 package Connection;
 
-
-import GUI.Center.Right;
-import Keys.AsymmetricCypher;
-import Keys.KeyHandler;
-import Keys.SymmetricCypher;
+import Connection.PubKeyExchange.Exchange;
+import GUI.Sides.Center.Right;
+import Security.AsymmetricCipher;
+import Security.KeyHandler;
+import Security.SymmetricCipher;
 
 import javax.crypto.SecretKey;
+import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-
 
 public class Receiver implements Runnable{
 
-    private DataInputStream dataInputStream;
-    private InputStream inputStream;
-
     private ServerSocket serverSocket;
-    private Socket clientSocket;
-
     private KeyHandler keyHandler;
-    private Socket socket;
     private Right right;
 
-
     public Receiver(Right right, KeyHandler keyHandler){
-        this.right = right;
-        this.keyHandler = keyHandler;
-        new Thread(this).start();
-    }
-
-    public void startReceiving(){
-        new Thread(new DataReceiver()).start();
+        try{
+            this.right = right;
+            this.keyHandler = new KeyHandler();
+            serverSocket = new ServerSocket(8181);
+            new Thread(this).start();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void run() {
+        System.out.println("Server awaiting connection...");
         try{
-            serverSocket = new ServerSocket(8181);
-            System.out.println("ServerSocket awaiting connection...");
-
-            clientSocket = serverSocket.accept();
-            System.out.println("Connection from " + clientSocket + "!");
-
-            inputStream = clientSocket.getInputStream();
-            dataInputStream = new DataInputStream(inputStream);
-            startReceiving();
-
+            while(!serverSocket.isClosed())
+                new ClientHandler(serverSocket.accept()).start();
         }catch (IOException e){
-            e.getStackTrace();
+            e.printStackTrace();
         }
     }
 
-    public class DataReceiver implements Runnable{
+    private void closeClientConnection(Socket client, DataInputStream dis, DataOutputStream dOut){
+        try{
+            System.out.println("Client from: " + client + " disconnected from server.");
+            client.close();
+            dis.close();
+            dOut.close();
+
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    private class ClientHandler extends Thread{
+        private final Socket clientSocket;
+        private DataInputStream dis;
+        private DataOutputStream dOut;
+
+        public ClientHandler(Socket socket){
+            this.clientSocket = socket;
+        }
+
         @Override
         public void run() {
+            try{
+                System.out.println("Client connected " + clientSocket);
+                dis = new DataInputStream(clientSocket.getInputStream());
+                dOut = new DataOutputStream(clientSocket.getOutputStream());
 
-            while (true) {
-                try {
-                    String protocol = dataInputStream.readUTF();
+                publicKeyExchange();
 
-                    switch (protocol) {
-                        case "A":
-                            receiveData();
-                            break;
+                while(!clientSocket.isClosed())
+                    receiveOption();
 
-                        case "B":
-                            receivePublicKey();
-                            break;
-
-                        case "C":
-                            receiveSessionKey();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            }catch ( IOException e){
+                closeClientConnection(clientSocket, dis, dOut);
             }
         }
 
+        // received file size is long, but after it is downcast to int
+        // so if the file is more than 2GB will be the exception.
         public void receiveData(){
-            try{
-                if(keyHandler.getReceivedWrappedSessionKey() == null){
-                    System.out.println("No session key received");
-                    return;
-                }
 
-                String filename = dataInputStream.readUTF();
-                long fileSize = dataInputStream.readLong();
+            try{
+                String receivedFileName  = dis.readUTF();
+                long receivedEncryptedFileSize = dis.readLong();
+                String receivedAlgorithmMethod = dis.readUTF();
+
                 byte [] buffer = new byte[4098];
 
                 // contains encrypted file
-                ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+                ByteArrayOutputStream byteOut = new ByteArrayOutputStream((int)receivedEncryptedFileSize);
 
                 int read = 0;
                 int totalRead = 0;
-                int remaining = (int)fileSize;
+                int remaining = (int)receivedEncryptedFileSize;
 
-                while((read = dataInputStream.read(buffer, 0, Math.min(buffer.length, remaining))) > 0) {
+                while((read = dis.read(buffer, 0, Math.min(buffer.length, remaining))) > 0) {
                     totalRead += read;
                     remaining -= read;
                     System.out.println("read " + totalRead + " bytes.");
                     byteOut.write(buffer, 0, read);
                 }
 
-                byte [] bytes = byteOut.toByteArray();
-                System.out.println("Received Wrapped Session Key: " +
-                        DatatypeConverter.printHexBinary(keyHandler.getReceivedWrappedSessionKey()) +
-                        " with size: " + keyHandler.getReceivedWrappedSessionKey().length + " \n");
+                File decryptedFile = SymmetricCipher.decryptFile(
+                        byteOut.toByteArray(),
+                        keyHandler.getReceivedSessionKey(),
+                        keyHandler.getReceivedInitVector(),
+                        receivedFileName,
+                        receivedAlgorithmMethod);
 
+                right.addFileToPanel(decryptedFile);
 
-                SecretKey unwrappedSessionKey = AsymmetricCypher.unwrapSessionKeyWithPrivateKey(
-                        keyHandler.getReceivedWrappedSessionKey(), keyHandler.getPrivateKey());
-
-                byte [] decryptedFile = SymmetricCypher.decryptFile(bytes, unwrappedSessionKey, keyHandler.getReceivedInitVector());
-
-                File receivedDecryptedFile = new File("received_"+filename);
-                try (FileOutputStream stream = new FileOutputStream(receivedDecryptedFile)) {
-                    stream.write(decryptedFile);
-                }
-
-                right.getModel().addElement(receivedDecryptedFile);
+                byteOut.close();
 
             }catch (IOException e){
-                //e.printStackTrace();
-                System.out.printf("Waiting for receiving Data..");
+                e.printStackTrace();
             }
+
+            keyHandler.setReceivedInitVector(null);
+            keyHandler.setReceivedSessionKey(null);
         }
 
-        public void receivePublicKey(){
-            PublicKey receivedPubKey = null;
-            byte [] bytes = new byte[2048];
+        public void publicKeyExchange(){
+            Exchange.receivePublicKey(dis, keyHandler);
+            Exchange.sendPublicKey(keyHandler.getPublicKey(), dOut);
 
+            //System.out.println("[Rece in SIDE = 2] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getReceivedPublicKey().getEncoded()));
+            //System.out.println("[Send in SIDE = 2] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getPublicKey().getEncoded()));
+        }
+
+        public void receivedInitVector(){
             try{
-                dataInputStream.read(bytes);
-                receivedPubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
-                keyHandler.setOtherPublicKey(receivedPubKey);
+                byte [] receivedInitVector = new byte [16];
+                dis.read(receivedInitVector);
+                keyHandler.setReceivedInitVector(receivedInitVector);
 
-                System.out.println("Public Key received");
-
-            }catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e){
-                //e.printStackTrace();
-                System.out.println("Waiting for receiving public key..");
+            }catch (IOException e){
+                e.printStackTrace();
             }
         }
 
         public void receiveSessionKey(){
             try{
+                int sessionKeyLength = dis.readInt();
+                byte [] wrappedSessionKey = new byte[sessionKeyLength];
+                dis.read(wrappedSessionKey);
 
-                int initVectorLength = dataInputStream.readInt();
-                int wrappedSessionKeyLength = dataInputStream.readInt();
+                // unwrap received session key
+                SecretKey unwrappedSessionKey = AsymmetricCipher.unwrapSessionKeyWithPrivateKey(wrappedSessionKey, keyHandler.getPrivateKey());
+                keyHandler.setReceivedSessionKey(unwrappedSessionKey);
 
-                byte [] initVector = new byte[initVectorLength];
-                byte [] wrappedSessionKey = new byte[wrappedSessionKeyLength];
-
-                dataInputStream.read(initVector);
-                dataInputStream.read(wrappedSessionKey);
-
-                keyHandler.setReceivedInitVector(initVector);
-                keyHandler.setReceivedSessionKey(wrappedSessionKey);
-
-                System.out.println("Wrapped Session Key received");
+                JOptionPane.showMessageDialog(null, "Session Key received", "InfoBox: Success", JOptionPane.INFORMATION_MESSAGE);
 
             }catch (IOException e){
-                //e.printStackTrace();
-                System.out.printf("Waiting for receiving Session key..");
+                closeClientConnection(clientSocket, dis, dOut);
             }
         }
 
-    }
-
-
-    public void disconnect(){
-        try{
-            inputStream.close();
-            dataInputStream.close();
-            socket.close();
-            serverSocket.close();
-        }catch (IOException e){
-            e.printStackTrace();
+        public void receiveOption(){
+            try{
+                String protocol = dis.readUTF();
+                switch (protocol) {
+                    case "A":
+                        receiveData();
+                        break;
+                    case "I":
+                        receivedInitVector();
+                        break;
+                    case "C":
+                        receiveSessionKey();
+                }
+            }catch (IOException e){
+                closeClientConnection(clientSocket, dis, dOut);
+            }
         }
     }
 }

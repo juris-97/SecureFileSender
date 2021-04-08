@@ -1,56 +1,58 @@
 package Events;
 
 import Connection.Sender;
-import GUI.Center.Left;
-import Keys.AsymmetricCypher;
-import Keys.KeyHandler;
-import Keys.SymmetricCypher;
+import GUI.Sides.Center.Left;
+import GUI.Sides.Center.LeftParts.LeftTop;
+import Security.AsymmetricCipher;
+import Security.KeyHandler;
+import Security.SymmetricCipher;
 
 import javax.crypto.SecretKey;
+import javax.swing.*;
+import javax.xml.bind.DatatypeConverter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.security.KeyPair;
+import static Events.ErrorHandler.showErrorDialog;
 
 public class LeftSideListeners {
+    private final LeftTop leftTop;
+    private final KeyHandler keyHandler;
+    private final Sender sender;
 
-    private final Left leftSide;
-    Sender sender;
-    KeyHandler keyHandler;
-    //Enumeration<AbstractButton> radioButtons;
-
-    public LeftSideListeners(Left leftSide, Sender sender, KeyHandler keyHandler){
-        this.leftSide = leftSide;
-
-        this.leftSide.getLeftTop().getGenerateButton().addActionListener(new GenerateSessionKeyListener());
-        this.leftSide.getLeftTop().getExchangeButton().addActionListener(new ExchangeSessionKeyListener());
-
+    public LeftSideListeners(Left left, KeyHandler keyHandler, Sender sender){
+        this.leftTop = left.getLeftTop();
         this.keyHandler = keyHandler;
         this.sender = sender;
-        //radioButtons = leftSide.getLeftBottom().getButtonGroup().getElements();
-    }
 
+        this.leftTop.getGenerateButton().addActionListener(new GenerateSessionKeyListener());
+        this.leftTop.getExchangeButton().addActionListener(new ExchangeSessionKeyListener());
+    }
 
     class GenerateSessionKeyListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            keyHandler.setSessionKey(SymmetricCypher.createSessionKey());
-            keyHandler.setInitialisedVector(SymmetricCypher.createInitializationVector());
-            System.out.println("GENERATE SESSION KEY CLICKED");
+            keyHandler.setSessionKey(SymmetricCipher.createSessionKey());
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Session Key Generated!",
+                    "InfoBox: " + "success", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     class ExchangeSessionKeyListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            if(keyHandler.getGeneratedSessionKey() != null && keyHandler.getInitialisedVector() != null){
-
-                // wrap session key with publicKey of user B
-                byte [] wrappedSessionKey
-                        = AsymmetricCypher.wrapSessionKeyWithPublicKey(keyHandler.getGeneratedSessionKey(),
-                        keyHandler.getOtherPublicKey());
-                // send wrapped session key
-                sender.sendWrappedSessionKeyAndInitVector();
-                System.out.println("Wrapped Session Key Send");
+            SecretKey secretKey = keyHandler.getSessionKey();
+            if(secretKey == null){
+                showErrorDialog("Before exchanging session key you should generate it!", "InfoBox: error while exchanging");
+                return;
             }
-            System.out.println("EXCHANGE SESSION KEY CLICKED");
+            if(!sender.isConnection()){
+                showErrorDialog("Before exchange you need to connect..", "InfoBox: error while exchanging");
+                return;
+            }
+            System.out.println("[SIDE = 1] Session Key: " + DatatypeConverter.printHexBinary(keyHandler.getSessionKey().getEncoded()));
+            byte [] wrappedSessionKey = AsymmetricCipher.wrapSessionKeyWithPublicKey(secretKey, keyHandler.getReceivedPublicKey());
+            sender.sendWrappedSessionKey(wrappedSessionKey);
+            keyHandler.setSessionKeyExchange(true);
         }
     }
 }

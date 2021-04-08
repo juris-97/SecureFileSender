@@ -1,7 +1,8 @@
-package GUI.Center.LeftParts;
+package GUI.Sides.Center.LeftParts;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Enumeration;
 
 public class LeftBottom extends JPanel {
 
@@ -11,8 +12,8 @@ public class LeftBottom extends JPanel {
     private static final int HEIGHT = (int) (40 * 7 / 2.0); // 140
 
     JRadioButton ECB;
+    JRadioButton CBC;
     JRadioButton CFB;
-    JRadioButton OCF;
     JRadioButton OFB;
 
     ButtonGroup buttonGroup;
@@ -21,8 +22,8 @@ public class LeftBottom extends JPanel {
         cypherMethodLabel = new JLabel("Choose cypher method: ");
 
         ECB = new JRadioButton("ECB");
+        CBC = new JRadioButton("CBC");
         CFB = new JRadioButton("CFB");
-        OCF = new JRadioButton("OCF");
         OFB = new JRadioButton("OFB");
         setPanel();
     }
@@ -45,13 +46,13 @@ public class LeftBottom extends JPanel {
         buttonGroup = new ButtonGroup();
 
         buttonGroup.add(ECB);
+        buttonGroup.add(CBC);
         buttonGroup.add(CFB);
-        buttonGroup.add(OCF);
         buttonGroup.add(OFB);
 
         lower.add(ECB);
+        lower.add(CBC);
         lower.add(CFB);
-        lower.add(OCF);
         lower.add(OFB);
 
 
@@ -59,7 +60,15 @@ public class LeftBottom extends JPanel {
         this.add(lower);
     }
 
-    public ButtonGroup getButtonGroup() {
-        return buttonGroup;
+    public JRadioButton getSelectedButton(){
+        for (Enumeration<AbstractButton> buttons = buttonGroup.getElements(); buttons.hasMoreElements();) {
+            AbstractButton button = buttons.nextElement();
+
+            if (button.isSelected()) {
+                return (JRadioButton) button;
+            }
+        }
+
+        return null;
     }
 }

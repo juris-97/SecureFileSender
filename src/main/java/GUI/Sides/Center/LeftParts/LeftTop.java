@@ -1,4 +1,4 @@
-package GUI.Center.LeftParts;
+package GUI.Sides.Center.LeftParts;
 
 import javax.swing.*;
 import java.awt.*;

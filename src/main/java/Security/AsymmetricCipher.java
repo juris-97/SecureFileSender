@@ -1,4 +1,4 @@
-package Keys;
+package Security;
 
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -6,11 +6,11 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import java.security.*;
 
-public class AsymmetricCypher {
+public class AsymmetricCipher {
     private static final String RSA = "RSA";
 
     // Generating public and private keys using RSA algorithm.
-    public static KeyPair generateRSAKeyPair() throws Exception {
+    public static KeyPair generateRSAKeyPair() throws NoSuchAlgorithmException {
         SecureRandom secureRandom = new SecureRandom();
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA);
         keyPairGenerator.initialize(2048, secureRandom);

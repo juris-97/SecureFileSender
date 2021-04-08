@@ -6,54 +6,44 @@ import Events.BottomListeners;
 import Events.LeftSideListeners;
 import Events.RightSideListeners;
 import Events.TopListeners;
-import GUI.Center.Left;
-import GUI.Center.Right;
-import Keys.AsymmetricCypher;
-import Keys.KeyHandler;
+import GUI.Sides.Bottom;
+import GUI.Sides.Center.Left;
+import GUI.Sides.Center.Right;
+import GUI.Sides.Top;
+import Security.KeyHandler;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 public class MainFrame {
-
     private static final int WIDTH  = 600;
     private static final int HEIGHT = 450;
 
-    JFrame frame;
-    JPanel background;
-    JPanel top, right, left, bottom;
+    private Top    top;
+    private Bottom bottom;
+    private Left   left;
+    private Right  right;
 
-    BottomListeners   bottomListeners;
-    TopListeners      topListeners;
-    LeftSideListeners leftSideListener;
-    RightSideListeners rightSideListeners;
+    private Sender sender;
+    private Receiver receiver;
 
-    KeyHandler keyHandler;
-    Receiver receiver;
-    Sender sender;
+    private KeyHandler keyHandler;
 
     public MainFrame(){
         initFrame();
-    }
-
-    public void initSender(){
-        sender = new Sender((Top) top, (Bottom) bottom, keyHandler);
-    }
-
-    public void initReceiving() {
-        receiver = new Receiver((Right) right, keyHandler);
+        initKeyHandler();
+        initConnection();
+        initListeners();
     }
 
     public void initFrame(){
-        frame = new JFrame("Secure File Sender");
+        JFrame frame = new JFrame("Secure File Sender");
         frame.setResizable(false);
         frame.setSize(WIDTH, HEIGHT);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        background = new JPanel();
+        JPanel background = new JPanel();
         background.setBackground(Color.lightGray);
         background.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 
@@ -63,33 +53,26 @@ public class MainFrame {
         right  = new Right(frame);
         bottom = new Bottom(frame);
 
-        try{
-            keyHandler = new KeyHandler();
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
-        initSender();
-        initReceiving();
-        initListeners();
-
         frame.getContentPane().add(background);
         frame.setVisible(true);
+    }
 
-        frame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                super.windowClosing(e);
-                sender.disconnect();
-            }
-        });
+    public void initConnection(){
+        sender = new Sender();
+        receiver = new Receiver(right, keyHandler);
+    }
+
+    public void initKeyHandler(){
+        // create keyHandler and generates
+        // pair of key (public, private)
+        keyHandler = new KeyHandler();
     }
 
     public void initListeners(){
 
-        bottomListeners = new BottomListeners((Bottom) bottom, (Top) top, (Left) left, (Right) right, sender, receiver);
-        topListeners = new TopListeners((Top) top, sender, keyHandler);
-        leftSideListener = new LeftSideListeners((Left) left, sender, keyHandler);
-        rightSideListeners = new RightSideListeners((Right) right);
+        new BottomListeners(bottom, top,  left.getLeftBottom(), keyHandler, sender);
+        new TopListeners(top, sender, keyHandler);
+        new LeftSideListeners(left,  keyHandler, sender);
+        new RightSideListeners(right);
     }
 }

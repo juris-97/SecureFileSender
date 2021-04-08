@@ -1,21 +1,19 @@
-package GUI.Center;
+package GUI.Sides.Center;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
 
 public class Right extends JPanel {
 
-    JFrame mainFrame;
-    JList list;
-
-    JScrollPane scrollPane;
-    JLabel receivedLabel;
-    DefaultListModel model;
-
     private static final int HEIGHT = 7 * 40; // 280
     private static final int WIDTH = 5 * 41; // 205
+
+    private final DefaultListModel model;
+    private final JScrollPane scrollPane;
+    private final JLabel receivedLabel;
+    private final JFrame mainFrame;
+    private final JList list;
 
     public Right(JFrame mainFrame){
         this.mainFrame = mainFrame;
@@ -29,7 +27,7 @@ public class Right extends JPanel {
 
         scrollPane = new JScrollPane(list);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         receivedLabel = new JLabel("Received files: ");
         receivedLabel.setBorder(BorderFactory.createEmptyBorder(0,40,5,0));
@@ -38,12 +36,11 @@ public class Right extends JPanel {
         this.add(scrollPane);
         mainFrame.getContentPane().add(BorderLayout.EAST, this);
     }
-
-    public JList getList() {
+    public JList<?> getList() {
         return list;
     }
 
-    public DefaultListModel getModel() {
-        return model;
+    public void addFileToPanel(File file){
+        this.model.addElement(file);
     }
 }

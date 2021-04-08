@@ -1,6 +1,6 @@
 package Events;
 
-import GUI.Center.Right;
+import GUI.Sides.Center.Right;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,18 +8,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
+import static Events.ErrorHandler.showErrorDialog;
 
 public class RightSideListeners {
-    Right rightSide;
-    JList<?> receivedFiles;
 
     public RightSideListeners(Right rightSide){
-        this.rightSide = rightSide;
-        this.receivedFiles = rightSide.getList();
-        receivedFiles.addMouseListener(new ReceivedFileChosen());
+        rightSide.getList().addMouseListener(new ReceivedFileChosen());
     }
 
-    class ReceivedFileChosen implements MouseListener{
+    class ReceivedFileChosen implements MouseListener {
         public void mouseClicked(MouseEvent e) {
             JList<?> list = (JList<?>) e.getSource();
             if(e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1){
@@ -31,8 +28,8 @@ public class RightSideListeners {
                     Desktop desktop = Desktop.getDesktop();
                     desktop.open((File)list.getSelectedValue());
                 }catch (IOException err){
-                    System.out.println("There is no default application " +
-                            "for opening files with this extension");
+                    showErrorDialog("There is no default application for" +
+                            " opening files with this extension", "InfoBox Warning");
                 }
             }
         }

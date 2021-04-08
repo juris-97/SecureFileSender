@@ -1,4 +1,4 @@
-package GUI;
+package GUI.Sides;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,25 +8,29 @@ public class Top extends JPanel {
 
     private static final int HEIGHT = (int) 2.5 * 40; // 100px
 
-    JFrame mainFrame;
-    JLabel toLabel;
-    JLabel pathLabel;
+    private final JLabel toLabel;
+    private final JLabel pathLabel;
+    private final JFrame mainFrame;
 
-    JTextField ipField;
-    JButton chooseFileButton;
-    JButton connectButton;
+    private final JButton chooseFileButton;
+    private final JButton connectButton;
 
     File chosenFile;
+    JTextField ipField;
 
     public Top(JFrame frame){
         this.mainFrame = frame;
+
         toLabel = new JLabel("To: ");
         ipField = new JTextField();
+
         chooseFileButton = new JButton("Choose File");
         connectButton = new JButton("Connect");
 
         pathLabel = new JLabel();
-        pathLabel.setBorder(BorderFactory.createEmptyBorder(0,10,0,40));
+        pathLabel.setBorder(BorderFactory.createEmptyBorder(
+                0, 10,0,40
+        ));
 
         initPanel();
     }
@@ -64,31 +68,18 @@ public class Top extends JPanel {
     public JButton getChooseFileButton() {
         return chooseFileButton;
     }
-
-    public JLabel getPathLabel() {
-        return pathLabel;
-    }
-
-    public JLabel getToLabel() {
-        return toLabel;
-    }
-
     public JTextField getIpField() {
         return ipField;
     }
-
     public void setPath(String path) {
         pathLabel.setText(path);
     }
-
     public JButton getConnectButton() {
         return connectButton;
     }
-
     public void setChosenFile(File chosenFile) {
         this.chosenFile = chosenFile;
     }
-
     public File getChosenFile() {
         return chosenFile;
     }
