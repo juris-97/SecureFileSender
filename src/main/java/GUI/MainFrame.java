@@ -58,7 +58,7 @@ public class MainFrame {
     }
 
     public void initConnection(){
-        sender = new Sender();
+        sender = new Sender(bottom);
         receiver = new Receiver(right, keyHandler);
     }
 

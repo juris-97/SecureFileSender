@@ -1,5 +1,7 @@
 package Security;
 
+import GUI.Sides.Bottom;
+
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import java.io.*;
@@ -34,7 +36,7 @@ public class SymmetricCipher {
     }
 
 
-    public static byte[] encryptFile(File file, SecretKey sessionKey, byte [] initVector, String CIPHER_ALGORITHM){
+    public static byte[] encryptFile(File file, SecretKey sessionKey, byte [] initVector, String CIPHER_ALGORITHM, Bottom bottom){
 
         try{
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
@@ -50,9 +52,16 @@ public class SymmetricCipher {
             byte[] plainBuf = new byte[8192];
             try (InputStream in = Files.newInputStream(file.toPath());
                  OutputStream out = new BufferedOutputStream(baos)) {
+
                 int nread;
+                double loopTimes = (double) file.length() / plainBuf.length;
+                double step = loopTimes != 0 ? (50 / loopTimes) : 50;
+                double progress = 0;
+
                 while ((nread = in.read(plainBuf)) > 0) {
                     byte[] enc = cipher.update(plainBuf, 0, nread);
+                    progress += step;
+                    bottom.getProgressBar().setValue((int) progress);
                     out.write(enc);
                 }
                 byte[] enc = cipher.doFinal();
