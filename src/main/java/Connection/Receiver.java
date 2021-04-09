@@ -12,6 +12,9 @@ import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.time.Duration;
+import java.time.Instant;
 
 public class Receiver implements Runnable{
 
@@ -80,8 +83,8 @@ public class Receiver implements Runnable{
         }
 
         // received file size is long, but after it is downcast to int
-        // so if the file is more than 2GB will be the exception.
-        public void receiveData(){
+        // so if the file is more than 2GB the exception can occur.
+        public synchronized void receiveData(){
 
             try{
                 String receivedFileName  = dis.readUTF();
@@ -90,8 +93,8 @@ public class Receiver implements Runnable{
 
                 byte [] buffer = new byte[4098];
 
-                // contains encrypted file
-                ByteArrayOutputStream byteOut = new ByteArrayOutputStream((int)receivedEncryptedFileSize);
+                File fileEncrypted = new File("encrypted");
+                FileOutputStream fos = new FileOutputStream(fileEncrypted);
 
                 int read = 0;
                 int totalRead = 0;
@@ -101,19 +104,33 @@ public class Receiver implements Runnable{
                     totalRead += read;
                     remaining -= read;
                     System.out.println("read " + totalRead + " bytes.");
-                    byteOut.write(buffer, 0, read);
+                    fos.write(buffer, 0, read);
                 }
+                System.out.println("\n");
+
+
+                // calculating encryption time
+                Instant start = Instant.now();
 
                 File decryptedFile = SymmetricCipher.decryptFile(
-                        byteOut.toByteArray(),
+                        fileEncrypted,
                         keyHandler.getReceivedSessionKey(),
                         keyHandler.getReceivedInitVector(),
                         receivedFileName,
                         receivedAlgorithmMethod);
 
+                Instant end = Instant.now();
+                Duration timeElapsed = Duration.between(start, end);
+                String mod = receivedAlgorithmMethod.split("/")[1];
+                System.out.println("[" + mod +"] " + "Decryption time: " + timeElapsed.getSeconds() * 0.001 + "s");
+                System.out.println("File size: " + decryptedFile.length() * 0.000001 + "MB");
+                System.out.println("-----------------------------------------------------------\n");
+
                 right.addFileToPanel(decryptedFile);
 
-                byteOut.close();
+                // deleting temporary encrypted file from computer
+                fos.close();
+                Files.delete(fileEncrypted.toPath());
 
             }catch (IOException e){
                 e.printStackTrace();
@@ -123,15 +140,12 @@ public class Receiver implements Runnable{
             keyHandler.setReceivedSessionKey(null);
         }
 
-        public void publicKeyExchange(){
+        public synchronized void publicKeyExchange(){
             Exchange.receivePublicKey(dis, keyHandler);
             Exchange.sendPublicKey(keyHandler.getPublicKey(), dOut);
-
-            //System.out.println("[Rece in SIDE = 2] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getReceivedPublicKey().getEncoded()));
-            //System.out.println("[Send in SIDE = 2] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getPublicKey().getEncoded()));
         }
 
-        public void receivedInitVector(){
+        public synchronized void receivedInitVector(){
             try{
                 byte [] receivedInitVector = new byte [16];
                 dis.read(receivedInitVector);
@@ -142,7 +156,7 @@ public class Receiver implements Runnable{
             }
         }
 
-        public void receiveSessionKey(){
+        public synchronized void receiveSessionKey(){
             try{
                 int sessionKeyLength = dis.readInt();
                 byte [] wrappedSessionKey = new byte[sessionKeyLength];

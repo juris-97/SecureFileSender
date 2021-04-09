@@ -11,7 +11,10 @@ import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.security.PublicKey;
+import java.time.Duration;
+import java.time.Instant;
 
 public class Sender{
 
@@ -47,9 +50,6 @@ public class Sender{
     public void exchangePublicKey(PublicKey key, DataOutputStream dOut, DataInputStream dis, KeyHandler keyHandler){
         Exchange.sendPublicKey(key, dOut);
         Exchange.receivePublicKey(dis, keyHandler);
-
-        //System.out.println("[Send in SIDE = 1] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getPublicKey().getEncoded()));
-        //System.out.println("[Rece in SIDE = 1] Public Key: " + DatatypeConverter.printHexBinary(keyHandler.getReceivedPublicKey().getEncoded()));
     }
 
     public void sendWrappedSessionKey(byte [] wrappedSessionKey){
@@ -83,28 +83,38 @@ public class Sender{
         }
     }
 
-    public void sendFile(File file, String algorithmMod, SecretKey sessionKey, byte [] initVector){
+    public synchronized void sendFile(File file, String algorithmMod, SecretKey sessionKey, byte [] initVector){
 
         String algorithm = "AES/" + algorithmMod + "/PKCS5PADDING";
-        byte [] encryptedFile = SymmetricCipher.encryptFile(file, sessionKey, initVector, algorithm, bottom);
+
+        // calculating encryption time
+        Instant start = Instant.now();
+
+        File encryptedFileTmp = SymmetricCipher.encryptFile(file, sessionKey, initVector, algorithm, bottom);
+
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("[" + algorithmMod +"] " + "Encryption time: " + timeElapsed.toMillis() * 0.001 +"s");
+        System.out.println("File size: " + file.length() * 0.000001 + "MB");
+        System.out.println("-----------------------------------------------------------\n");
 
         try{
             dOut.writeUTF("A"); // defining protocol
             dOut.writeUTF(file.getName());
-            dOut.writeLong(encryptedFile.length);
+            dOut.writeLong(encryptedFileTmp.length());
             dOut.writeUTF(algorithm);
 
             byte[] buffer = new byte[4096];
             int read = 0;
             int remaining = (int) file.length();
 
-            ByteArrayInputStream bais = new ByteArrayInputStream(encryptedFile);
+            FileInputStream fis = new FileInputStream(encryptedFileTmp);
 
-            double loopTimes = (double) encryptedFile.length / buffer.length;
+            double loopTimes = (double) encryptedFileTmp.length() / buffer.length;
             double step = loopTimes != 0 ? (50 / loopTimes) : 100;
             double progress = bottom.getProgressBar().getValue();
 
-            while ((read = bais.read(buffer, 0, Math.min(buffer.length, remaining))) > 0){
+            while ((read = fis.read(buffer, 0, Math.min(buffer.length, remaining))) > 0){
                 dOut.write(buffer, 0, read);
 
                 progress += step;
@@ -112,16 +122,15 @@ public class Sender{
             }
 
             bottom.getProgressBar().setValue(0);
-            System.out.println("[SIDE = 1] Encrypted File sent!");
             dOut.flush();
-            bais.close();
+            fis.close();
 
+            Files.delete(encryptedFileTmp.toPath());
 
         }catch (IOException e){
             e.printStackTrace();
         }
     }
-
 
     public void sendInitVector(byte [] initVector){
         try{
