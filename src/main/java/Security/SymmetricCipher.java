@@ -36,7 +36,7 @@ public class SymmetricCipher {
     }
 
 
-    public static byte[] encryptFile(File file, SecretKey sessionKey, byte [] initVector, String CIPHER_ALGORITHM, Bottom bottom){
+    public static File encryptFile(File file, SecretKey sessionKey, byte [] initVector, String CIPHER_ALGORITHM, Bottom bottom){
 
         try{
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
@@ -47,11 +47,13 @@ public class SymmetricCipher {
                 cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
             }
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream((int)file.length() + 16);
+
+            File encryptedFile = new File("tmp");
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
 
             byte[] plainBuf = new byte[8192];
             try (InputStream in = Files.newInputStream(file.toPath());
-                 OutputStream out = new BufferedOutputStream(baos)) {
+                 OutputStream out = new BufferedOutputStream(fos)) {
 
                 int nread;
                 double loopTimes = (double) file.length() / plainBuf.length;
@@ -67,9 +69,9 @@ public class SymmetricCipher {
                 byte[] enc = cipher.doFinal();
                 out.write(enc);
             }
-            byte [] encryptedBytes = baos.toByteArray();
-            baos.close();
-            return encryptedBytes;
+
+            fos.close();
+            return encryptedFile;
 
         }catch (NoSuchAlgorithmException
                 | NoSuchPaddingException
@@ -84,7 +86,7 @@ public class SymmetricCipher {
         return null;
     }
 
-    public static File decryptFile(byte [] encryptedFile, SecretKey sessionKey, byte [] initVector, String filename ,String CIPHER_ALGORITHM){
+    public static File decryptFile(File file, SecretKey sessionKey, byte [] initVector, String filename ,String CIPHER_ALGORITHM){
         try{
 
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
@@ -97,11 +99,10 @@ public class SymmetricCipher {
 
 
             File decryptedFile = new File(filename);
-            FileOutputStream fos = new FileOutputStream(decryptedFile);
 
             byte[] plainBuf = new byte[8192];
-            try (InputStream in = new BufferedInputStream(new ByteArrayInputStream(encryptedFile));
-                 OutputStream out = new BufferedOutputStream(fos)) {
+            try (InputStream in = new FileInputStream(file);
+                 OutputStream out = new FileOutputStream(decryptedFile)) {
                 int nread;
                 while ((nread = in.read(plainBuf)) > 0) {
                     byte[] enc = cipher.update(plainBuf, 0, nread);
@@ -112,7 +113,7 @@ public class SymmetricCipher {
             }catch (IOException e){
                 e.printStackTrace();
             }
-            fos.close();
+
             return decryptedFile;
 
         }catch (NoSuchAlgorithmException
@@ -120,7 +121,6 @@ public class SymmetricCipher {
                 | IllegalBlockSizeException
                 | BadPaddingException
                 | InvalidKeyException
-                | IOException
                 | InvalidAlgorithmParameterException e){
             e.printStackTrace();
         }
