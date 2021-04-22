@@ -50,6 +50,9 @@ Sender side:  </br>
 Receiver side:  </br>
 ![alt text](img/receiver.gif "receiver") </br>
 
+To open and view the received file, you can double-click on the selected file in the received files section. </br>
+After clicking, the file will be opened by the default installed application on your OS, depending on the file extension. </br>
+
 ## Speed Test
 Callculated time for encryption/decryption of eigth different sized files. </br>
 
